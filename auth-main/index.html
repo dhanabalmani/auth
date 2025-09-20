@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MagiqAuth • Simple Auth</title>
+  <style>
+    :root{ --bg:#0b1020; --card:#121831; --muted:#7d8bb3; --text:#e8eefc; --accent:#6ea8fe; --danger:#ff6b6b; --success:#50c878; }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial; background: radial-gradient(1200px 800px at 20% -10%, #1a245a33, transparent), var(--bg); color:var(--text); min-height:100vh; display:grid; place-items:center}
+    .wrap{width:min(960px, 94vw)}
+    .brand{display:flex; align-items:center; gap:.6rem; margin-bottom:1.25rem; opacity:.9}
+    .brand .logo{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#6ea8fe,#9b7bff); box-shadow:0 8px 24px #6ea8fe33}
+    .card{background:linear-gradient(180deg, #121831, #0f1530); border:1px solid #24305a; box-shadow:0 10px 40px #0005, inset 0 1px 0 #ffffff08; border-radius:20px; padding:22px;}
+    .tabs{display:flex; gap:8px; background:#0b1126; border:1px solid #1f2750; padding:6px; border-radius:14px; width:max-content; margin-bottom:14px}
+    .tab{border:none; background:transparent; color:var(--muted); padding:8px 14px; border-radius:10px; cursor:pointer; transition:.25s}
+    .tab.active{background:#172046; color:var(--text); box-shadow:0 6px 20px #0006}
+    .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+    @media (max-width: 760px){.grid{grid-template-columns:1fr}}
+    h1{font-size:1.5rem; margin:.2rem 0 1rem}
+    p.muted{color:var(--muted); margin:.25rem 0 1rem}
+    form{display:grid; gap:10px}
+    label{font-size:.9rem; color:#b8c6f0}
+    input{width:100%; padding:12px 12px; border-radius:12px; border:1px solid #2a3567; background:#0c1330; color:var(--text); outline:none; transition:border .2s}
+    input:focus{border-color:#3c4aa3}
+    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .btn{border:none; padding:11px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:transform .02s ease, filter .2s}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:linear-gradient(180deg,#7aa5ff,#5f89f1); color:#0a0f24}
+    .btn.ghost{background:#10173a; color:#c9d5ff; border:1px solid #263062}
+    .btn.danger{background:linear-gradient(180deg,#ff8a8a,#ff6b6b); color:#240a0a}
+    .btn[disabled]{opacity:.6; cursor:not-allowed; filter:grayscale(.3)}
+    .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .help{font-size:.85rem; color:var(--muted)}
+    .error{background:#2a1020; border:1px solid #7b234a; color:#ffb3c1; padding:10px; border-radius:12px; display:none}
+    .error.show{display:block}
+    .success{background:#0f2a1e; border:1px solid #2f7b57; color:#c7ffea; padding:10px; border-radius:12px; display:none}
+    .success.show{display:block}
+    .view{opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .25s ease, transform .25s ease}
+    .view.active{opacity:1; transform:translateY(0); pointer-events:auto}
+    .divider{height:1px; background:linear-gradient(90deg, transparent, #263062, transparent); margin:14px 0}
+    .badge{display:inline-flex; align-items:center; gap:6px; font-size:.8rem; padding:6px 10px; border-radius:999px; border:1px solid #2a3567; background:#0d1536}
+    code.small{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, Monaco, monospace; font-size:.8rem; color:#bbcafc}
+    .loading{display:inline-flex; gap:8px; align-items:center}
+    .spinner{width:16px; height:16px; border-radius:50%; border:2px solid #9db6ff; border-top-color:transparent; animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .dash{display:grid; gap:14px}
+    .kv{display:grid; grid-template-columns:140px 1fr; gap:8px; align-items:center}
+    .token-box{background:#0b1231; border:1px dashed #2a3567; border-radius:12px; padding:10px; color:#a8b6f0; max-height:120px; overflow:auto}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><div class="logo"></div><div>
+      <strong>MagiqAuth Demo</strong><div class="help">HTML + JavaScript</div>
+    </div></div>
+
+    <!-- Auth Views -->
+    <div id="authView" class="card view active" aria-live="polite">
+      <div class="tabs" role="tablist" aria-label="Authentication Tabs">
+        <button id="tabLogin" class="tab active" role="tab" aria-selected="true" aria-controls="loginPanel">Login</button>
+        <button id="tabRegister" class="tab" role="tab" aria-selected="false" aria-controls="registerPanel">Register</button>
+      </div>
+
+      <div class="grid">
+        <!-- Login Panel -->
+        <section id="loginPanel" role="tabpanel" aria-labelledby="tabLogin">
+          <h1>Welcome back</h1>
+          <p class="muted">Sign in to access your dashboard.</p>
+          <div id="loginError" class="error" role="alert"></div>
+          <form id="loginForm" novalidate>
+            <label>Username
+              <input id="loginUsername" name="username" autocomplete="username" required minlength="3" placeholder="yourname" />
+            </label>
+            <label>Password
+              <input id="loginPassword" name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="••••••••" />
+            </label>
+            <div class="actions">
+              <button id="loginBtn" class="btn primary" type="submit">
+                <span class="btnText">Login</span>
+                <span class="loading" style="display:none"><span class="spinner"></span>Logging in…</span>
+              </button>
+              <button class="btn ghost" type="button" id="toRegister">Create account</button>
+            </div>
+            <div class="help">Demo uses MagiqAuth API. Your token is saved in <code class="small">localStorage</code>.</div>
+          </form>
+        </section>
+
+        <!-- Register Panel -->
+        <section id="registerPanel" role="tabpanel" aria-labelledby="tabRegister" hidden>
+          <h1>Create your account</h1>
+          <p class="muted">Register with a username, email, and a strong password.</p>
+          <div id="registerError" class="error" role="alert"></div>
+          <div id="registerSuccess" class="success" role="status"></div>
+          <form id="registerForm" novalidate>
+            <label>Username
+              <input id="regUsername" name="username" autocomplete="username" required minlength="3" placeholder="yourname" />
+            </label>
+            <label>Email
+              <input id="regEmail" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+            </label>
+            <label>Password
+              <input id="regPassword" name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters" />
+            </label>
+            <div class="actions">
+              <button id="registerBtn" class="btn primary" type="submit">
+                <span class="btnText">Register</span>
+                <span class="loading" style="display:none"><span class="spinner"></span>Creating…</span>
+              </button>
+              <button class="btn ghost" type="button" id="toLogin">Back to login</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <div class="divider"></div>
+      <div class="badge">Base URL: <code class="small">http://localhost:3000/api</code></div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashView" class="card view" aria-live="polite">
+      <h1>Dashboard</h1>
+      <p class="muted">You're authenticated. Below is your profile as returned by <code class="small">/auth/me</code>.</p>
+
+      <div class="grid">
+        <div class="dash">
+          <div class="badge">Session Status: <span id="sessionStatus">checking…</span></div>
+          <div class="kv"><div>Username</div><div id="dUsername">—</div></div>
+          <div class="kv"><div>Email</div><div id="dEmail">—</div></div>
+          <div class="kv"><div>Role</div><div id="dRole">—</div></div>
+          <div class="kv"><div>Permissions</div><div id="dPerms">—</div></div>
+          <div class="kv"><div>User ID</div><div id="dUserId">—</div></div>
+        </div>
+        <div>
+          <label>JWT (stored in localStorage)</label>
+          <div class="token-box" id="tokenBox">—</div>
+          <div class="actions" style="margin-top:10px">
+            <button id="logoutBtn" class="btn danger">Logout</button>
+            <button id="refreshBtn" class="btn ghost">Refresh Profile</button>
+          </div>
+          <div id="dashError" class="error" role="alert" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== Configuration ======
+    const API_BASE = 'http://localhost:3000/api';
+    const CLIENT_ID = 'test-app';
+    const CLIENT_SECRET = 'test-secret';
+    const STORAGE_TOKEN_KEY = 'magiq_token';
+    const STORAGE_USER_KEY = 'magiq_user';
+
+    const api = async (path, { method='GET', body=null, auth=false }={}) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-client-id': CLIENT_ID,
+        'x-client-secret': CLIENT_SECRET,
+      };
+      if(auth){
+        const t = localStorage.getItem(STORAGE_TOKEN_KEY);
+        if(t) headers['Authorization'] = `Bearer ${t}`;
+      }
+      const res = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null,
+      });
+      let data = null;
+      try { data = await res.json(); } catch(e) { /* non-JSON */ }
+      if(!res.ok){
+        const msg = (data && (data.message || data.error || data.msg)) || `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.status = res.status;
+        err.payload = data;
+        throw err;
+      }
+      return data;
+    };
+
+    // ====== Utils ======
+    const $ = (sel) => document.querySelector(sel);
+    const show = (el) => { el.classList.add('show'); };
+    const hide = (el) => { el.classList.remove('show'); };
+    const setLoading = (btn, loading) => {
+      const text = btn.querySelector('.btnText');
+      const spinner = btn.querySelector('.loading');
+      btn.disabled = loading;
+      if(text && spinner){
+        text.style.display = loading ? 'none' : '';
+        spinner.style.display = loading ? 'inline-flex' : 'none';
+      }
+    };
+    const clearForm = (form) => { if(!form) return; form.reset(); [...form.querySelectorAll('input')].forEach(i => i.value = ''); };
+
+    // Basic validators
+    const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    const minLen = (v, n) => (v||'').trim().length >= n;
+
+    // JWT helpers (expiry check)
+    const decodeJwt = (token) => {
+      try{
+        const [, payload] = token.split('.');
+        const json = atob(payload.replace(/-/g,'+').replace(/_/g,'/'));
+        return JSON.parse(decodeURIComponent(escape(json)));
+      }catch(e){ return null; }
+    };
+    const isTokenExpired = (token) => {
+      const p = decodeJwt(token);
+      if(!p || !p.exp) return false; // If unknown, let server validate
+      const nowSec = Math.floor(Date.now()/1000);
+      return p.exp <= nowSec;
+    };
+
+    // ====== Views ======
+    const authView = $('#authView');
+    const dashView = $('#dashView');
+    const loginPanel = $('#loginPanel');
+    const registerPanel = $('#registerPanel');
+
+    const switchTab = (tab) => {
+      const isLogin = tab === 'login';
+      $('#tabLogin').classList.toggle('active', isLogin);
+      $('#tabRegister').classList.toggle('active', !isLogin);
+      loginPanel.hidden = !isLogin;
+      registerPanel.hidden = isLogin;
+      hide($('#loginError')); hide($('#registerError')); hide($('#registerSuccess'));
+      loginPanel.scrollTop = 0; registerPanel.scrollTop = 0;
+    };
+
+    const showView = (view) => {
+      if(view === 'dash'){
+        authView.classList.remove('active');
+        dashView.classList.add('active');
+      } else {
+        dashView.classList.remove('active');
+        authView.classList.add('active');
+      }
+    };
+
+    // ====== Session & Profile ======
+    const setSession = (token, user) => {
+      if(token) localStorage.setItem(STORAGE_TOKEN_KEY, token);
+      if(user) localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+      $('#tokenBox').textContent = token || '—';
+    };
+    const clearSession = () => {
+      localStorage.removeItem(STORAGE_TOKEN_KEY);
+      localStorage.removeItem(STORAGE_USER_KEY);
+      $('#tokenBox').textContent = '—';
+    };
+
+    const fillProfile = (user) => {
+      $('#dUsername').textContent = user?.username || '—';
+      $('#dEmail').textContent = user?.email || '—';
+      $('#dRole').textContent = user?.role?.name || '—';
+      const perms = user?.role?.permissions || [];
+      $('#dPerms').textContent = Array.isArray(perms) && perms.length ? perms.join(', ') : '—';
+      $('#dUserId').textContent = user?.id || '—';
+    };
+
+    const refreshProfile = async () => {
+      const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+      const statusEl = $('#sessionStatus');
+      const dashErr = $('#dashError'); dashErr.textContent = ''; hide(dashErr);
+      if(!token){ statusEl.textContent = 'no token'; return; }
+      if(isTokenExpired(token)){
+        statusEl.textContent = 'token expired';
+        await doLogout({silent:true});
+        return;
+      }
+      statusEl.textContent = 'validating…';
+      try{
+        const res = await api('/auth/me', { method:'GET', auth:true });
+        const user = res?.data?.user || res?.user || res?.data || {};
+        fillProfile(user);
+        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+        statusEl.textContent = 'active';
+      }catch(e){
+        statusEl.textContent = 'invalid';
+        dashErr.textContent = `Session check failed: ${e.message}`; show(dashErr);
+        if(e.status === 401){ await doLogout({silent:true}); }
+      }
+    };
+
+    // ====== Auth Actions ======
+    const doLogin = async (username, password) => {
+      const data = await api('/auth/login', { method:'POST', body:{ username, password } });
+      const token = data?.data?.token || data?.token;
+      const user = data?.data?.user || data?.user || {};
+      if(!token) throw new Error('No token returned');
+      setSession(token, user);
+      return { token, user };
+    };
+
+    const doRegister = async (username, email, password) => {
+      return await api('/auth/register', { method:'POST', body:{ username, email, password } });
+    };
+
+    const doLogout = async ({silent=false} = {}) => {
+      const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+      try{
+        if(token) await api('/auth/logout', { method:'POST', auth:true });
+      }catch(e){
+        // If token invalid/expired, still clear session silently
+        if(!silent){ const de = $('#dashError'); de.textContent = `Logout notice: ${e.message}`; show(de); }
+      } finally {
+        clearSession();
+        switchTab('login');
+        showView('auth');
+      }
+    };
+
+    // ====== Event Listeners ======
+    $('#tabLogin').addEventListener('click', () => switchTab('login'));
+    $('#tabRegister').addEventListener('click', () => switchTab('register'));
+    $('#toRegister').addEventListener('click', () => switchTab('register'));
+    $('#toLogin').addEventListener('click', () => switchTab('login'));
+
+    // Login submit
+    $('#loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#loginError'); err.textContent=''; hide(err);
+      const btn = $('#loginBtn');
+      const username = $('#loginUsername').value.trim();
+      const password = $('#loginPassword').value;
+      // validations
+      if(!minLen(username,3)) { err.textContent='Username must be at least 3 characters.'; show(err); return; }
+      if(!minLen(password,8)) { err.textContent='Password must be at least 8 characters.'; show(err); return; }
+      setLoading(btn,true);
+      try{
+        await doLogin(username, password);
+        clearForm($('#loginForm'));
+        showView('dash');
+        await refreshProfile();
+      }catch(e){
+        if(e.status === 401){ err.textContent = 'Invalid credentials. Please check your username/password.'; }
+        else if(e.status >= 500){ err.textContent = 'Server error. Please try again later.'; }
+        else { err.textContent = e.message || 'Login failed.'; }
+        show(err);
+      }finally{ setLoading(btn,false); }
+    });
+
+    // Register submit
+    $('#registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#registerError'); err.textContent=''; hide(err);
+      const ok = $('#registerSuccess'); ok.textContent=''; hide(ok);
+      const btn = $('#registerBtn');
+      const username = $('#regUsername').value.trim();
+      const email = $('#regEmail').value.trim();
+      const password = $('#regPassword').value;
+
+      // validations
+      if(!minLen(username,3)) { err.textContent='Username must be at least 3 characters.'; show(err); return; }
+      if(!isEmail(email)) { err.textContent='Please enter a valid email address.'; show(err); return; }
+      if(!minLen(password,8)) { err.textContent='Password must be at least 8 characters.'; show(err); return; }
+
+      setLoading(btn,true);
+      try{
+        const res = await doRegister(username, email, password);
+        // Some APIs return token on register; if so, log in automatically.
+        const token = res?.data?.token || res?.token;
+        const user = res?.data?.user || res?.user;
+        if(token){
+          setSession(token, user);
+          clearForm($('#registerForm'));
+          showView('dash');
+          await refreshProfile();
+          return;
+        }
+        // Otherwise, prompt user to login.
+        ok.textContent = 'Registration successful! Please login with your new credentials.'; show(ok);
+        switchTab('login');
+        $('#loginUsername').value = username;
+        clearForm($('#registerForm'));
+      }catch(e){
+        if(e.status === 409){ err.textContent = 'Username or email already exists.'; }
+        else if(e.status === 422){ err.textContent = 'Validation error. Please review your inputs.'; }
+        else if(e.status >= 500){ err.textContent = 'Server error. Please try again later.'; }
+        else { err.textContent = e.message || 'Registration failed.'; }
+        show(err);
+      }finally{ setLoading(btn,false); }
+    });
+
+    // Logout
+    $('#logoutBtn').addEventListener('click', async () => { await doLogout(); });
+
+    // Refresh profile
+    $('#refreshBtn').addEventListener('click', async () => { await refreshProfile(); });
+
+    // ====== Boot: restore session ======
+    (async function init(){
+      const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+      if(token){
+        $('#tokenBox').textContent = token;
+        showView('dash');
+        await refreshProfile();
+      } else {
+        showView('auth');
+      }
+    })();
+  </script>
+</body>
+</html>
